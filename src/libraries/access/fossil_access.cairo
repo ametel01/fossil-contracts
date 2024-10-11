@@ -5,7 +5,7 @@ trait IFossilAccess<TContractState> {
 }
 
 #[starknet::component]
-mod FossilAccessComponent {
+pub mod FossilAccessComponent {
     use openzeppelin_access::accesscontrol::interface::IAccessControl;
     use openzeppelin_access::accesscontrol::{
         AccessControlComponent, AccessControlComponent::AccessControlImpl
@@ -13,6 +13,9 @@ mod FossilAccessComponent {
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_upgrades::upgradeable::UpgradeableComponent;
     use starknet::contract_address_const;
+
+    pub const DEFAULT_ADMIN_ROLE: felt252 =
+        0x11dae477f8d19f28ee3d3c12d370ebd893ebd5b6439624c3bbafd665b9af3fd; // DEFAULT_ADMIN_ROLE
 
     pub const TIMELOCK_ROLE: felt252 =
         0x5f7316d60cf1f828ab97f367a66060cc70af5e656dcaa8607039c5a80c791ea; // TIMELOCK_ROLE
@@ -36,7 +39,7 @@ mod FossilAccessComponent {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         FreezeAll: FreezeAll,
         UnfreezeAll: UnfreezeAll,
     }
@@ -53,8 +56,8 @@ mod FossilAccessComponent {
         pub const NOT_FOSSIL_ROLE: felt252 = 'Not Fossil role';
     }
 
-    #[abi(embed_v0)]
-    impl FossilAccesImpl<
+    #[embeddable_as(FossilAccessImpl)]
+    pub impl FossilAccess<
         TContractState,
         +HasComponent<TContractState>,
         +AccessControlComponent::HasComponent<TContractState>,
@@ -72,7 +75,7 @@ mod FossilAccessComponent {
     }
 
     #[generate_trait]
-    impl Private<
+    pub impl PrivateImpl<
         TContractState,
         +HasComponent<TContractState>,
         impl Access: AccessControlComponent::HasComponent<TContractState>,
@@ -80,11 +83,11 @@ mod FossilAccessComponent {
         +SRC5Component::HasComponent<TContractState>,
         +Drop<TContractState>
     > of PrivateTrait<TContractState> {
-        fn only_prover(ref self: ComponentState<TContractState>) {
+        fn only_prover(self: @ComponentState<TContractState>) {
             self._check_prover();
         }
 
-        fn only_not_frozen(ref self: ComponentState<TContractState>) {
+        fn only_not_frozen(self: @ComponentState<TContractState>) {
             self._check_not_frozen();
         }
 
@@ -96,7 +99,7 @@ mod FossilAccessComponent {
             };
         }
 
-        fn _check_not_frozen(ref self: ComponentState<TContractState>) {
+        fn _check_not_frozen(self: @ComponentState<TContractState>) {
             if self.frozen.read() {
                 panic!("{}", Errors::CONTRACT_IS_FROZEN);
             };
